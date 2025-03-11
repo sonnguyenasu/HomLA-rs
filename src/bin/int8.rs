@@ -135,14 +135,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
             //println!("{} {}", i, j);
-            let T1 = &P[i-1][j] - u;//&u_enc;
-            let T2 = &H[i-1][j] - v;//_enc;
+            let T1 = &P[i-1][j] - u;
+            let T2 = &H[i-1][j] - v;
             let S = T1.ge(&T2);
             P[i][j] = S.select(&T1, &T2);
             Px[i][j] = S.select(&Px[i-1][j], &Hx[i-1][j]);
             Py[i][j] = S.select(&Py[i-1][j],&Hy[i-1][j]);
-            let T1 = &Q[i][j-1] - &u_enc;
-            let T2 = &H[i][j-1] - &v_enc;
+            let T1 = &Q[i][j-1] - u;
+            let T2 = &H[i][j-1] - v;
             let S = T1.ge(&T2);
             Q[i][j] = S.select(&T1, &T2);
             Qx[i][j] = S.select(&Qx[i][j-1], &Hx[i][j-1]);
@@ -151,9 +151,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             H[i][j] = S.select(&P[i][j], &Q[i][j]);
             Hx[i][j] = S.select(&Px[i][j], &Qx[i][j]);
             Hy[i][j] = S.select(&Py[i][j], &Qy[i][j]);
-            let E = Es[i][j].clone();//query_enc[i].eq(reference[j]);
-            let T2 = &H[i-1][j-1] - &sE_enc;//E.select(&sO_enc, &sE_enc);
-            let T1 = &H[i-1][j-1] + &sO_enc;
+            let E = Es[i][j].clone();
+            let T2 = &H[i-1][j-1] - sE;
+            let T1 = &H[i-1][j-1] + sO;
             let T2 = E.select(&T1, &T2);
             let S = T2.ge(&H[i][j]);
             H[i][j] = S.select(&T2, &H[i][j]);
@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     let elapsed = now.elapsed();
-    println!("compute time: {}", elapsed.as_secs());
+    println!("compute time: {} s", elapsed.as_secs());
     for i in 0..8{
         for j in 0..10{
             let d_decrypted: i8 = H[i][j].decrypt(&client_key);
