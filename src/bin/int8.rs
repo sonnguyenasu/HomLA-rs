@@ -1,7 +1,7 @@
 #![allow(unused)]
 #![allow(non_snake_case)]
 use tfhe::array::Slicing;
-use tfhe::{prelude::*, CpuFheUint8Array, FheUint, FheUint8Id};
+use tfhe::{prelude::*, CpuFheUint8Array, FheBool, FheUint, FheUint8Id};
 use tfhe::{generate_keys, set_server_key, ConfigBuilder, FheUint32, FheUint8, FheInt8, FheInt8Id};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -110,14 +110,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //let mut Py= CpuFheUint8Array::try_encrypt((init_py.as_slice(), vec![8,10]), &client_key)?;
 
     //let mut Qy= CpuFheUint8Array::try_encrypt((init_qy.as_slice(), vec![8,10]), &client_key)?;
-    
+    let mut Es: Vec<Vec<FheBool>> = vec![];
+    for i in 0..8{
+        Es.push(vec![]);
+        for j in 0..10{
+            Es[i].push(query_enc[i].eq(reference[j]));
+        }
+    }
     
     let d_decrypted: Vec<i8> = Hy[0][..10].iter().map(|enc| enc.decrypt(&client_key)).collect();
     for i in 0..10{
         print!("{} ",d_decrypted[i]);
     }
     println!("");
-
+    let now = std::time::Instant::now();
     // begin computing the matrix
     for d in 1..n+m-1{
         let start = if d-m > 0 { d-m+1 } else { 1 };
@@ -129,8 +135,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
             //println!("{} {}", i, j);
-            let T1 = &P[i-1][j] - &u_enc;
-            let T2 = &H[i-1][j] - &v_enc;
+            let T1 = &P[i-1][j] - u;//&u_enc;
+            let T2 = &H[i-1][j] - v;//_enc;
             let S = T1.ge(&T2);
             P[i][j] = S.select(&T1, &T2);
             Px[i][j] = S.select(&Px[i-1][j], &Hx[i-1][j]);
@@ -145,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             H[i][j] = S.select(&P[i][j], &Q[i][j]);
             Hx[i][j] = S.select(&Px[i][j], &Qx[i][j]);
             Hy[i][j] = S.select(&Py[i][j], &Qy[i][j]);
-            let E = query_enc[i].eq(&reference_enc[j]);
+            let E = Es[i][j].clone();//query_enc[i].eq(reference[j]);
             let T2 = &H[i-1][j-1] - &sE_enc;//E.select(&sO_enc, &sE_enc);
             let T1 = &H[i-1][j-1] + &sO_enc;
             let T2 = E.select(&T1, &T2);
@@ -161,6 +167,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Hy[i][j] = S.select(&Hy[i][j], &FheInt8::encrypt(j as i8, &client_key));
         }
     }
+    let elapsed = now.elapsed();
+    println!("compute time: {}", elapsed.as_secs());
     for i in 0..8{
         for j in 0..10{
             let d_decrypted: i8 = H[i][j].decrypt(&client_key);
